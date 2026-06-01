@@ -1,15 +1,22 @@
-FROM node:20-alpine
-
+# ===== Сборка =====
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Устанавливаем зависимости отдельным слоем (кэшируется при неизменном package.json)
 COPY package*.json ./
-RUN npm install
-
-# Копируем исходники (в dev перекрываются bind-mount'ом из docker-compose)
+RUN npm ci
 COPY . .
+RUN npx prisma generate && npm run build
 
+# ===== Production =====
+FROM node:20-alpine AS production
+WORKDIR /app
+# NODE_ENV задаётся в рантайме (docker-compose), чтобы npm ci установил и dev-зависимости,
+# нужные для миграций (prisma CLI) и сид-скрипта (ts-node).
+COPY package*.json ./
+RUN npm ci
+COPY --from=build /app/dist ./dist
+COPY prisma ./prisma
+COPY tsconfig*.json ./
+RUN npx prisma generate
 EXPOSE 3000
-
-# Команда переопределяется в docker-compose (generate + migrate + seed + start:dev)
-CMD ["npm", "run", "start:dev"]
+# Применяем миграции, сидируем администратора, запускаем собранный сервер
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/src/main"]

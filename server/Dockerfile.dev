@@ -1,0 +1,9 @@
+# Dev-образ сервера: исходники монтируются из docker-compose.override.yml,
+# команда (generate + migrate + seed + start:dev) задаётся там же.
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["npm", "run", "start:dev"]

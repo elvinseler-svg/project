@@ -1,15 +1,13 @@
-FROM node:20-alpine
-
+# ===== Сборка статики =====
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Устанавливаем зависимости отдельным слоем
 COPY package*.json ./
-RUN npm install
-
-# Копируем исходники (в dev перекрываются bind-mount'ом из docker-compose)
+RUN npm ci
 COPY . .
+RUN npm run build
 
-EXPOSE 5173
-
-# Vite dev-сервер, слушает все интерфейсы (доступен с хоста)
-CMD ["npm", "run", "dev", "--", "--host"]
+# ===== Отдача через nginx =====
+FROM nginx:alpine AS production
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

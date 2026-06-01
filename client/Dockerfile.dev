@@ -1,0 +1,9 @@
+# Dev-образ клиента: исходники монтируются из docker-compose.override.yml,
+# работает dev-сервер Vite с hot-reload.
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host"]

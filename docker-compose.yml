@@ -1,8 +1,9 @@
 name: project
 
-# Базовая конфигурация — БЕЗ volumes (требование облачного деплоя Timeweb Cloud).
-# Тома для локальной разработки вынесены в docker-compose.override.yml
-# (он в .gitignore и не уходит на деплой).
+# Production-конфигурация: собранные образы (server → dist + node, client → nginx).
+# Для локальной разработки используется docker-compose.override.yml
+# (dev-образы Dockerfile.dev, hot-reload, тома) — он подхватывается автоматически.
+# Без секций volumes — требование облачного деплоя (Timeweb Cloud).
 
 services:
   db:
@@ -20,12 +21,15 @@ services:
       retries: 20
 
   server:
-    build: ./server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
+      NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_LOGIN: ${ADMIN_LOGIN}
@@ -33,17 +37,13 @@ services:
       PORT: ${PORT}
     ports:
       - "3000:3000"
-    # При старте: генерируем клиент, применяем миграции, сидируем админа, запускаем сервер
-    command: sh -c "npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run start:dev"
 
   client:
-    build: ./client
+    build:
+      context: ./client
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       - server
-    environment:
-      # Внутри Docker-сети Vite проксирует /api на контейнер server
-      VITE_PROXY_TARGET: http://server:3000
     ports:
-      - "5173:5173"
-    command: npm run dev -- --host
+      - "80:80"
