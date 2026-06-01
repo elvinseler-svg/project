@@ -1,0 +1,23 @@
+# Локальная разработка: тома для hot-reload и персистентности БД.
+#
+# Docker Compose подхватывает этот файл АВТОМАТИЧЕСКИ при локальном `docker compose up`
+# и объединяет с docker-compose.yml. На облачном деплое (Timeweb Cloud) файла нет
+# (он в .gitignore), поэтому санитайзер, запрещающий volumes, его не видит.
+
+services:
+  db:
+    volumes:
+      - db_data:/var/lib/mysql
+
+  server:
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+
+  client:
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+
+volumes:
+  db_data:

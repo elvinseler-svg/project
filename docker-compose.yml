@@ -1,5 +1,9 @@
 name: project
 
+# Базовая конфигурация — БЕЗ volumes (требование облачного деплоя Timeweb Cloud).
+# Тома для локальной разработки вынесены в docker-compose.override.yml
+# (он в .gitignore и не уходит на деплой).
+
 services:
   db:
     image: mysql:8.4
@@ -9,8 +13,6 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
       - "3306:3306"
-    volumes:
-      - db_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 5s
@@ -31,10 +33,7 @@ services:
       PORT: ${PORT}
     ports:
       - "3000:3000"
-    volumes:
-      - ./server:/app
-      - /app/node_modules
-    # При старте: генерируем клиент, применяем миграции, сидируем админа, запускаем dev-сервер
+    # При старте: генерируем клиент, применяем миграции, сидируем админа, запускаем сервер
     command: sh -c "npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run start:dev"
 
   client:
@@ -47,10 +46,4 @@ services:
       VITE_PROXY_TARGET: http://server:3000
     ports:
       - "5173:5173"
-    volumes:
-      - ./client:/app
-      - /app/node_modules
     command: npm run dev -- --host
-
-volumes:
-  db_data:
